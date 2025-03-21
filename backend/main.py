@@ -212,15 +212,40 @@ app.add_middleware(
 )
 
 @app.on_event("startup")
-def startup_event():
-    logger.info("OpenAI + CLIP RAG server started. Ready to handle image queries...")
-    
-    # Initialize Pinecone connection
+async def startup_event():
+    logger.info("Starting application...")
     try:
-        logger.info("Testing Pinecone connection...")
-        # Add any initialization code here
+        # Initialize CLIP model
+        logger.info("Loading CLIP model...")
+        global clip_model, clip_processor
+        clip_model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
+        clip_processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
+        logger.info("CLIP model loaded successfully")
+        
+        # Initialize other services
+        if OPENAI_SECRET_KEY:
+            logger.info("Configuring OpenAI...")
+            openai.api_key = OPENAI_SECRET_KEY
+            if OPENAI_ORG_ID:
+                openai.organization = OPENAI_ORG_ID
+        else:
+            logger.warning("Missing OPENAI_SECRET_KEY")
+
+        if PINECONE_API_KEY:
+            logger.info("Initializing Pinecone...")
+            pinecone.init(api_key=PINECONE_API_KEY, environment=PINECONE_ENV)
+            if INDEX_NAME in pinecone.list_indexes():
+                global index
+                index = pinecone.Index(INDEX_NAME)
+                logger.info("Pinecone initialized successfully")
+            else:
+                logger.warning(f"Index '{INDEX_NAME}' not found")
+        else:
+            logger.warning("Missing PINECONE_API_KEY")
+
     except Exception as e:
-        logger.error(f"Error initializing services: {e}")
+        logger.error(f"Startup error: {str(e)}")
+        raise
 
 ##############################
 # Endpoints
@@ -344,10 +369,15 @@ def root():
 
 @app.get("/health")
 async def health_check():
-    status = {
-        "status": "healthy",
-        "openai_configured": bool(OPENAI_SECRET_KEY),
-        "pinecone_configured": bool(PINECONE_API_KEY),
-        "cors_origins": CORS_ALLOWED_ORIGINS
-    }
-    return status
+    try:
+        status = {
+            "status": "healthy",
+            "openai_configured": bool(OPENAI_SECRET_KEY),
+            "pinecone_configured": bool(PINECONE_API_KEY),
+            "clip_model_loaded": bool(clip_model and clip_processor),
+            "cors_origins": CORS_ALLOWED_ORIGINS
+        }
+        return status
+    except Exception as e:
+        logger.error(f"Health check error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))

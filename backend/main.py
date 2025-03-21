@@ -40,7 +40,7 @@ try:
     PINECONE_ENV = os.getenv("PINECONE_ENV", "us-east1-gcp")
     CORS_ALLOWED_ORIGINS = os.getenv(
         "CORS_ALLOWED_ORIGINS",
-        "https://artist-in-progress-frontend.vercel.app/"
+        "https://artist-in-progress-frontend.vercel.app"
     ).split(",")
 
     # Initialize services

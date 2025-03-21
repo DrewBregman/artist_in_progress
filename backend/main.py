@@ -123,8 +123,8 @@ Please detail:
 Output a thorough and inspiring narrative or bullet points.
 """
     try:
-        resp = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",  # or "gpt-4" if you have access
+        resp = openai.chat.completions.create(
+            model="o3-mini",  # or "gpt-4" if you have access
             messages=[
                 {"role": "system", "content": sys_prompt},
                 {"role": "user", "content": user_prompt}
@@ -151,8 +151,8 @@ A user has uploaded an artwork that resembles this style. Please:
 3) Provide supportive, motivating advice to keep them engaged and growing
 """
     try:
-        resp = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",  # or "gpt-4" if you have access
+        resp = openai.chat.completions.create(
+            model="o3-mini",  # or "gpt-4" if you have access
             messages=[
                 {"role": "system", "content": sys_prompt},
                 {"role": "user", "content": user_prompt}
@@ -183,8 +183,8 @@ For the user who is inspired by this style, recommend:
 Output a concise, actionable plan.
 """
     try:
-        resp = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",  # or "gpt-4" if you have access
+        resp = openai.chat.completions.create(
+            model="o3-mini",  # or "gpt-4" if you have access
             messages=[
                 {"role": "system", "content": sys_prompt},
                 {"role": "user", "content": user_prompt}

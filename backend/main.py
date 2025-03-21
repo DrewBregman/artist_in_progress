@@ -23,6 +23,11 @@ logging.basicConfig(
 )
 logger = logging.getLogger("OpenAI_Clip_RAG")
 
+# -------------------------------------------
+# IMPORTANT: Define the dimension here
+DIMENSION = 1536
+# -------------------------------------------
+
 # Wrap initialization in try-except
 try:
     load_dotenv(".env")
@@ -33,7 +38,10 @@ try:
     OPENAI_PROJECT_ID = os.getenv("OPENAI_PROJECT_ID", "")
     PINECONE_API_KEY = os.getenv("PINECONE_API_KEY", "")
     PINECONE_ENV = os.getenv("PINECONE_ENV", "us-east1-gcp")
-    CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS", "https://artist-in-progress-frontend-9fupv5u51-drewbregmans-projects.vercel.app").split(",")
+    CORS_ALLOWED_ORIGINS = os.getenv(
+        "CORS_ALLOWED_ORIGINS",
+        "https://artist-in-progress-frontend-9fupv5u51-drewbregmans-projects.vercel.app"
+    ).split(",")
 
     # Initialize services
     if OPENAI_SECRET_KEY:
@@ -43,9 +51,9 @@ try:
     else:
         logger.warning("Missing OPENAI_SECRET_KEY - some features may not work")
 
+    INDEX_NAME = "artist-complete-info-index"
     if PINECONE_API_KEY:
         pinecone.init(api_key=PINECONE_API_KEY, environment=PINECONE_ENV)
-        INDEX_NAME = "artist-complete-info-index"
         if INDEX_NAME in pinecone.list_indexes():
             index = pinecone.Index(INDEX_NAME)
         else:
@@ -76,11 +84,12 @@ class LocalClipEmbedder:
         with torch.no_grad():
             outputs = self.model.get_image_features(**inputs)  # shape: (1, 512)
             emb = outputs[0].cpu().numpy()  # (512,)
+
         # Zero-pad to 1536
         pad_needed = DIMENSION - self.clip_output_dim
         if pad_needed < 0:
             logger.warning("Index dimension smaller than CLIP dimension, adjusting approach.")
-        # Convert numpy float32 to regular Python float
+
         padded = [float(x) for x in emb] + [0.0] * pad_needed
         return padded[:DIMENSION]
 
@@ -114,8 +123,8 @@ Please detail:
 Output a thorough and inspiring narrative or bullet points.
 """
     try:
-        resp = openai.chat.completions.create(
-            model="o3-mini",  # or gpt-4 if you have access
+        resp = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",  # or "gpt-4" if you have access
             messages=[
                 {"role": "system", "content": sys_prompt},
                 {"role": "user", "content": user_prompt}
@@ -142,8 +151,8 @@ A user has uploaded an artwork that resembles this style. Please:
 3) Provide supportive, motivating advice to keep them engaged and growing
 """
     try:
-        resp = openai.chat.completions.create(
-            model="o3-mini",  # or gpt-4 if you have access
+        resp = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",  # or "gpt-4" if you have access
             messages=[
                 {"role": "system", "content": sys_prompt},
                 {"role": "user", "content": user_prompt}
@@ -174,8 +183,8 @@ For the user who is inspired by this style, recommend:
 Output a concise, actionable plan.
 """
     try:
-        resp = openai.chat.completions.create(
-            model="o3-mini",  # or gpt-4 if you have access
+        resp = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",  # or "gpt-4" if you have access
             messages=[
                 {"role": "system", "content": sys_prompt},
                 {"role": "user", "content": user_prompt}
@@ -239,8 +248,8 @@ async def startup_event():
         if PINECONE_API_KEY:
             logger.info("Initializing Pinecone...")
             pinecone.init(api_key=PINECONE_API_KEY, environment=PINECONE_ENV)
+            global index
             if INDEX_NAME in pinecone.list_indexes():
-                global index
                 index = pinecone.Index(INDEX_NAME)
                 logger.info("Pinecone initialized successfully")
             else:
@@ -279,16 +288,12 @@ def ask_image(
     # 2) query pinecone
     res = index.query(vector=img_emb, top_k=top_k, include_metadata=True)
     if not res.matches:
-        return {
-            "answer":"No data found in index for your image."
-        }
+        return {"answer":"No data found in index for your image."}
     
     # 3) threshold filtering
     valid = [m for m in res.matches if m.score >= threshold]
     if not valid:
-        return {
-            "answer":"No relevant data above threshold."
-        }
+        return {"answer":"No relevant data above threshold."}
     
     # 4) combine chunks from top matches
     combined_text = ""
@@ -312,10 +317,7 @@ def ask_image(
             top_artist_name = artist
             top_score = score_val
     
-    # 5) GPT calls: 
-    #    a) Outline the journey of the most similar artist(s)
-    #    b) Provide direct feedback for the user's artwork
-    #    c) Suggest recommended next steps/resources
+    # 5) GPT calls
     journey_outline = outline_artist_journey(combined_text)
     feedback_tips = feedback_and_tips_for_artwork(combined_text)
     next_steps = recommended_next_steps(combined_text)

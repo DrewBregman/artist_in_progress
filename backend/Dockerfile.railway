@@ -14,13 +14,14 @@ RUN mkdir -p /app/.cache/huggingface
 
 # Copy requirements first for better caching
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Explicitly use pip with --break-system-packages flag for Railway
+RUN pip install --no-cache-dir --break-system-packages -r requirements.txt
 
 # Pre-download NLTK and Huggingface models to avoid runtime downloads
-RUN python -c "import nltk; nltk.download('punkt')" && \
+RUN python -c "import nltk; nltk.download('punkt', quiet=True)" && \
     python -c "from transformers import CLIPProcessor, CLIPModel; \
-    model = CLIPModel.from_pretrained('openai/clip-vit-base-patch32'); \
-    processor = CLIPProcessor.from_pretrained('openai/clip-vit-base-patch32')"
+    model = CLIPModel.from_pretrained('openai/clip-vit-base-patch32', force_download=False); \
+    processor = CLIPProcessor.from_pretrained('openai/clip-vit-base-patch32', force_download=False)"
 
 # Copy application code
 COPY . .

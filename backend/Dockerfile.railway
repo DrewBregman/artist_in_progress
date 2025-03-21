@@ -16,7 +16,7 @@ RUN mkdir -p /app/.cache/huggingface
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Download and cache models
+# Pre-download NLTK and Huggingface models to avoid runtime downloads
 RUN python -c "import nltk; nltk.download('punkt')" && \
     python -c "from transformers import CLIPProcessor, CLIPModel; \
     model = CLIPModel.from_pretrained('openai/clip-vit-base-patch32'); \
@@ -26,8 +26,8 @@ RUN python -c "import nltk; nltk.download('punkt')" && \
 COPY . .
 
 # Environment variables will be passed at runtime
-ENV PORT=8000
 ENV PYTHONUNBUFFERED=1
+ENV PORT=8000
 
 # Command to run the FastAPI application with proper logging
 CMD python -m uvicorn main:app --host 0.0.0.0 --port $PORT --log-level debug

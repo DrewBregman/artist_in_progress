@@ -33,7 +33,7 @@ try:
     OPENAI_PROJECT_ID = os.getenv("OPENAI_PROJECT_ID", "")
     PINECONE_API_KEY = os.getenv("PINECONE_API_KEY", "")
     PINECONE_ENV = os.getenv("PINECONE_ENV", "us-east1-gcp")
-    CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS", "*").split(",")
+    CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS", "https://artist-in-progress-frontend-84ab40gh4-drewbregmans-projects.vercel.app,http://localhost:3000").split(",")
 
     # Initialize services
     if OPENAI_SECRET_KEY:
@@ -196,12 +196,17 @@ app = FastAPI(
     description="Query an index with an uploaded image, then summarize with GPT."
 )
 
+# Add CORS middleware BEFORE any routes
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=CORS_ALLOWED_ORIGINS,
+    allow_origins=[
+        "https://artist-in-progress-frontend-84ab40gh4-drewbregmans-projects.vercel.app",
+        "http://localhost:3000"
+    ],  # Explicitly list allowed origins
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["*"],  # Allows all methods
+    allow_headers=["*"],  # Allows all headers
+    expose_headers=["*"]  # Expose all headers
 )
 
 # Initialize CLIP model globally

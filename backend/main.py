@@ -211,17 +211,24 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Initialize CLIP model globally
+try:
+    logger.info("Loading CLIP model...")
+    clip_model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
+    clip_processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    clip_model.to(device)
+    logger.info(f"CLIP model loaded successfully on {device}")
+except Exception as e:
+    logger.error(f"Failed to load CLIP model: {str(e)}")
+    clip_model = None
+    clip_processor = None
+    raise
+
 @app.on_event("startup")
 async def startup_event():
     logger.info("Starting application...")
     try:
-        # Initialize CLIP model
-        logger.info("Loading CLIP model...")
-        global clip_model, clip_processor
-        clip_model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
-        clip_processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
-        logger.info("CLIP model loaded successfully")
-        
         # Initialize other services
         if OPENAI_SECRET_KEY:
             logger.info("Configuring OpenAI...")

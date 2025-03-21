@@ -7,16 +7,22 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
+# Set up model cache directory
+ENV TRANSFORMERS_CACHE=/app/.cache/huggingface
+RUN mkdir -p /app/.cache/huggingface
+
 # Copy requirements first for better caching
-COPY requirements.txt .
+COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Download NLTK data and CLIP model
+# Download and cache models
 RUN python -c "import nltk; nltk.download('punkt')" && \
-    python -c "from transformers import CLIPProcessor, CLIPModel; CLIPModel.from_pretrained('openai/clip-vit-base-patch32'); CLIPProcessor.from_pretrained('openai/clip-vit-base-patch32')"
+    python -c "from transformers import CLIPProcessor, CLIPModel; \
+    model = CLIPModel.from_pretrained('openai/clip-vit-base-patch32'); \
+    processor = CLIPProcessor.from_pretrained('openai/clip-vit-base-patch32')"
 
 # Copy application code
-COPY . .
+COPY backend/ .
 
 # Environment variables will be passed at runtime
 ENV PORT=8000

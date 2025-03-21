@@ -12,12 +12,13 @@ cmds = [
   ". /opt/venv/bin/activate",
   "pip install --upgrade pip",
   "pip install -r backend/requirements.txt",
-  "python -c \"import nltk; nltk.download('punkt')\"",
-  "python -c \"from transformers import CLIPProcessor, CLIPModel; CLIPModel.from_pretrained('openai/clip-vit-base-patch32'); CLIPProcessor.from_pretrained('openai/clip-vit-base-patch32')\""
+  "mkdir -p /opt/venv/cache/huggingface",
+  "TRANSFORMERS_CACHE=/opt/venv/cache/huggingface python -c \"import nltk; nltk.download('punkt')\"",
+  "TRANSFORMERS_CACHE=/opt/venv/cache/huggingface python -c \"from transformers import CLIPProcessor, CLIPModel; model = CLIPModel.from_pretrained('openai/clip-vit-base-patch32'); processor = CLIPProcessor.from_pretrained('openai/clip-vit-base-patch32')\""
 ]
 
 [start]
-cmd = ". /opt/venv/bin/activate && cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT --log-level debug"
+cmd = "TRANSFORMERS_CACHE=/opt/venv/cache/huggingface . /opt/venv/bin/activate && cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT --log-level debug"
 
 [deploy]
 healthcheckPath = "/health"

@@ -33,7 +33,7 @@ try:
     OPENAI_PROJECT_ID = os.getenv("OPENAI_PROJECT_ID", "")
     PINECONE_API_KEY = os.getenv("PINECONE_API_KEY", "")
     PINECONE_ENV = os.getenv("PINECONE_ENV", "us-east1-gcp")
-    CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS").split(",")
+    CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS", "https://artist-in-progress-frontend-9fupv5u51-drewbregmans-projects.vercel.app").split(",")
 
     # Initialize services
     if OPENAI_SECRET_KEY:
@@ -199,12 +199,15 @@ app = FastAPI(
 # Add CORS middleware using the environment variable
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=CORS_ALLOWED_ORIGINS,  # Uses the environment variable we already have
+    allow_origins=CORS_ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
     expose_headers=["*"]
 )
+
+# Add this debug log
+logger.info(f"CORS middleware configured with origins: {CORS_ALLOWED_ORIGINS}")
 
 # Initialize CLIP model globally
 try:

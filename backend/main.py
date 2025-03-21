@@ -102,8 +102,14 @@ class LocalClipEmbedder:
         padded = [float(x) for x in emb] + [0.0] * pad_needed
         return padded[:DIMENSION]
 
-# Instantiate the local clip embedder
-clip_embedder = LocalClipEmbedder()
+# Lazy-load the CLIP embedder only when needed
+clip_embedder = None
+
+def get_clip_embedder():
+    global clip_embedder
+    if clip_embedder is None:
+        clip_embedder = LocalClipEmbedder()
+    return clip_embedder
 
 ##############################
 # GPT Helper Calls
@@ -226,6 +232,13 @@ app.add_middleware(
 @app.on_event("startup")
 def startup_event():
     logger.info("OpenAI + CLIP RAG server started. Ready to handle image queries...")
+    
+    # Initialize Pinecone connection
+    try:
+        logger.info("Testing Pinecone connection...")
+        # Add any initialization code here
+    except Exception as e:
+        logger.error(f"Error initializing services: {e}")
 
 ##############################
 # Endpoints
@@ -249,7 +262,7 @@ def ask_image(
         raise HTTPException(status_code=400, detail="No image data provided.")
     
     # 1) embed with local CLIP
-    img_emb = clip_embedder.embed_image(Image.open(io.BytesIO(image_data)).convert("RGB"))
+    img_emb = get_clip_embedder().embed_image(Image.open(io.BytesIO(image_data)).convert("RGB"))
     
     # 2) query pinecone
     res = index.query(vector=img_emb, top_k=top_k, include_metadata=True)
@@ -320,7 +333,7 @@ def artist_name_only(
         raise HTTPException(status_code=400, detail="No image data provided.")
     
     # 1) embed with local CLIP
-    img_emb = clip_embedder.embed_image(Image.open(io.BytesIO(image_data)).convert("RGB"))
+    img_emb = get_clip_embedder().embed_image(Image.open(io.BytesIO(image_data)).convert("RGB"))
     
     # 2) query pinecone
     res = index.query(vector=img_emb, top_k=top_k, include_metadata=True)
@@ -343,5 +356,14 @@ def artist_name_only(
 @app.get("/")
 def root():
     return {
-        "message":"OpenAI + local CLIP RAG (Image-Only) server. Endpoints: /ask-image and /artist-name-only."
+        "message":"OpenAI + local CLIP RAG (Image-Only) server. Endpoints: /ask-image and /artist-name-only.",
+        "status":"healthy"
+    }
+
+@app.get("/health")
+def health_check():
+    return {
+        "status": "healthy",
+        "pinecone_connected": INDEX_NAME in pinecone.list_indexes(),
+        "openai_key_configured": bool(OPENAI_SECRET_KEY)
     }

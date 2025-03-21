@@ -15,9 +15,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 RUN python -c "import nltk; nltk.download('punkt')"
 
 # Copy application code
-COPY backend/ ./
+COPY . .
 
-# Environment variables will be passed at runtime
-
-# Command to run the FastAPI application
-CMD uvicorn main:app --host 0.0.0.0 --port $PORT
+# Command to run the application
+CMD ["python", "-m", "uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]

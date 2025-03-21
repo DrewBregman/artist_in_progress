@@ -1,31 +1,3 @@
-#!/usr/bin/env python3
-"""
-main.py
-
-A significantly enhanced FastAPI server to query the "artist-complete-info-index"
-populated by scrape_and_ingest_openai.py. We now focus solely on image queries:
-
-- The user uploads an image of their artwork.
-- We embed the image with the local CLIP model from Transformers (dimension=512).
-- We zero-pad the result to dimension=1536 to match Pinecone's index (text-embedding-ada-002 + CLIP).
-- We query Pinecone (dimension=1536) for top_k chunks or image references.
-- We filter out matches below a similarity threshold.
-- We then use OpenAI GPT calls to:
-    1) Outline the journey of the most similar famous artist(s).
-    2) Provide direct feedback and tips to help the user improve their artwork.
-    3) Offer recommended next steps or resources to deepen their art practice.
-- We also provide a separate function/endpoint to return only the top artist(s) name(s).
-
-Environment Variables:
-- OPENAI_SECRET_KEY, (possibly OPENAI_ORG_ID, OPENAI_PROJECT_ID)
-- PINECONE_API_KEY, PINECONE_ENV
-- Confirm the dimension=1536 in Pinecone for text-embedding-ada-002,
-  and CLIP zero-padding approach for images.
-
-Usage:
-  uvicorn main:app --host 0.0.0.0 --port 8000 --reload
-"""
-
 import os
 import re
 import io
@@ -52,6 +24,7 @@ OPENAI_ORG_ID      = os.getenv("OPENAI_ORG_ID", "")
 OPENAI_PROJECT_ID  = os.getenv("OPENAI_PROJECT_ID", "")
 PINECONE_API_KEY   = os.getenv("PINECONE_API_KEY", "")
 PINECONE_ENV       = os.getenv("PINECONE_ENV", "us-east1-gcp")  # Example
+CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS", "*").split(",")
 
 if not OPENAI_SECRET_KEY:
     raise ValueError("Missing OPENAI_SECRET_KEY.")
@@ -223,7 +196,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=CORS_ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

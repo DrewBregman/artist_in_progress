@@ -2,16 +2,20 @@
 nixPkgs = [
   "python311",
   "python311Packages.pip",
+  "python311Packages.virtualenv",
   "gcc",
   "nodejs-18_x"
 ]
 
 [phases.install]
 cmds = [
+  "virtualenv venv",
+  "source venv/bin/activate",
+  "pip install --upgrade pip",
   "pip install -r backend/requirements.txt",
   "python -c \"import nltk; nltk.download('punkt')\"",
   "python -c \"from transformers import CLIPProcessor, CLIPModel; CLIPModel.from_pretrained('openai/clip-vit-base-patch32'); CLIPProcessor.from_pretrained('openai/clip-vit-base-patch32')\""
 ]
 
 [start]
-cmd = "cd backend && python -m uvicorn main:app --host 0.0.0.0 --port $PORT"
+cmd = "source venv/bin/activate && cd backend && python -m uvicorn main:app --host 0.0.0.0 --port $PORT"

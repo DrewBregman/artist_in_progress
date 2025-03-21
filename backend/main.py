@@ -16,37 +16,46 @@ from dotenv import load_dotenv
 from PIL import Image
 from transformers import CLIPProcessor, CLIPModel
 
-load_dotenv(".env")
-
-# Environment
-OPENAI_SECRET_KEY  = os.getenv("OPENAI_SECRET_KEY", "")
-OPENAI_ORG_ID      = os.getenv("OPENAI_ORG_ID", "")
-OPENAI_PROJECT_ID  = os.getenv("OPENAI_PROJECT_ID", "")
-PINECONE_API_KEY   = os.getenv("PINECONE_API_KEY", "")
-PINECONE_ENV       = os.getenv("PINECONE_ENV", "us-east1-gcp")  # Example
-CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS", "*").split(",")
-
-if not OPENAI_SECRET_KEY:
-    raise ValueError("Missing OPENAI_SECRET_KEY.")
-if not PINECONE_API_KEY:
-    raise ValueError("Missing PINECONE_API_KEY.")
-
-# OpenAI init
-openai.api_key = OPENAI_SECRET_KEY
-if OPENAI_ORG_ID:
-    openai.organization = OPENAI_ORG_ID
-
-# Pinecone init
-pinecone.init(api_key=PINECONE_API_KEY, environment=PINECONE_ENV)
-INDEX_NAME = "artist-complete-info-index"
-if INDEX_NAME not in pinecone.list_indexes():
-    raise ValueError(f"Index '{INDEX_NAME}' not found. Please run scrape_and_ingest_openai.py first.")
-index = pinecone.Index(INDEX_NAME)
-DIMENSION = 1536  # text-embedding-ada-002 + zero-padded CLIP
-
-# Logging
-logging.basicConfig(level=logging.INFO)
+# Add more detailed logging
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger("OpenAI_Clip_RAG")
+
+# Wrap initialization in try-except
+try:
+    load_dotenv(".env")
+
+    # Environment
+    OPENAI_SECRET_KEY = os.getenv("OPENAI_SECRET_KEY", "")
+    OPENAI_ORG_ID = os.getenv("OPENAI_ORG_ID", "")
+    OPENAI_PROJECT_ID = os.getenv("OPENAI_PROJECT_ID", "")
+    PINECONE_API_KEY = os.getenv("PINECONE_API_KEY", "")
+    PINECONE_ENV = os.getenv("PINECONE_ENV", "us-east1-gcp")
+    CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS", "*").split(",")
+
+    # Initialize services
+    if OPENAI_SECRET_KEY:
+        openai.api_key = OPENAI_SECRET_KEY
+        if OPENAI_ORG_ID:
+            openai.organization = OPENAI_ORG_ID
+    else:
+        logger.warning("Missing OPENAI_SECRET_KEY - some features may not work")
+
+    if PINECONE_API_KEY:
+        pinecone.init(api_key=PINECONE_API_KEY, environment=PINECONE_ENV)
+        INDEX_NAME = "artist-complete-info-index"
+        if INDEX_NAME in pinecone.list_indexes():
+            index = pinecone.Index(INDEX_NAME)
+        else:
+            logger.warning(f"Index '{INDEX_NAME}' not found - some features may not work")
+    else:
+        logger.warning("Missing PINECONE_API_KEY - some features may not work")
+
+except Exception as e:
+    logger.error(f"Startup error: {str(e)}")
+    raise
 
 # Local CLIP for image queries
 class LocalClipEmbedder:
@@ -334,9 +343,11 @@ def root():
     }
 
 @app.get("/health")
-def health_check():
-    return {
+async def health_check():
+    status = {
         "status": "healthy",
-        "pinecone_connected": INDEX_NAME in pinecone.list_indexes(),
-        "openai_key_configured": bool(OPENAI_SECRET_KEY)
+        "openai_configured": bool(OPENAI_SECRET_KEY),
+        "pinecone_configured": bool(PINECONE_API_KEY),
+        "cors_origins": CORS_ALLOWED_ORIGINS
     }
+    return status

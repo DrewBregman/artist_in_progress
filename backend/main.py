@@ -98,13 +98,6 @@ def get_clip_embedder():
 ##############################
 
 def outline_artist_journey(chunk_text: str) -> str:
-    """
-    Provide a creative outline of the most similar artist's journey into becoming a great artist:
-    - Early influences and challenges
-    - How they practiced and improved
-    - Unique attributes, quotes, and perspectives
-    - How this can help a new artist
-    """
     sys_prompt = "You are an AI art mentor. Provide a creative, inspiring outline of the artist's journey based on the chunks."
     user_prompt = f"""
 We found these chunk(s) in the database:
